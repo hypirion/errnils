@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+
+if hash gofmt 2>/dev/null; then
+    notgood=""
+    while read st file; do
+        # skip deleted files
+        if [ "$st" == 'D' ]; then continue; fi
+        # do a check only on golang files
+        if [[ "$file" =~ \.go$ ]]; then
+            res="$(gofmt -l "$file")"
+            if [ $? -ne 0 ]; then
+                echo "gofmt failed, check syntax in modified file: $file"
+                exit 1
+            fi
+            if [[ -n "$res" ]]; then
+                notgood="$notgood- $file
+"
+            fi
+        fi
+    done < <(git diff --cached --name-status)
+    if [[ -n "$notgood" ]]; then
+        echo "Some go files contain source code which gofmt is not happy about:"
+        echo -n "$notgood"
+        echo "Either run gofmt (or disable pre-commit hooks)"
+        exit 1
+    fi
+fi
